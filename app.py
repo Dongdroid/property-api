@@ -22,9 +22,6 @@ def parse_nifty():
 
         print(f"URL受け取りました: {url}")
 
-        # ここで物件情報を抜き出す処理（関数などに置き換えてください）
-        # 例としてOpenAIに質問する例を載せます
-
         # ChatGPTに物件URLの情報を整理してもらうイメージ
         messages = [
             {"role": "system", "content": "あなたは不動産情報をわかりやすく整理するアシスタントです。"},
@@ -40,3 +37,14 @@ def parse_nifty():
         print(f"OpenAIの回答: {answer_text}")
 
         # 必要ならここでさらに解析や加工も可能
+
+        # 結果をJSONで返す
+        return jsonify({'result': answer_text})
+
+    except Exception as e:
+        print(f"エラー発生: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8080)
