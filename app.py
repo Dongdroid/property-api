@@ -1,42 +1,42 @@
 from flask import Flask, request, jsonify
-import requests
-from bs4 import BeautifulSoup
-import openai
-
-openai.api_key = "YOUR_API_KEY"  # ← ここに自分のChatGPT APIキーを入れてね！
+from openai import OpenAI
 
 app = Flask(__name__)
 
-@app.route("/parse_nifty", methods=["POST"])
+# OpenAIクライアントを作成
+client = OpenAI()
+
+@app.route('/')
+def hello():
+    return 'API is running!'
+
+@app.route('/parse_nifty', methods=['POST'])
 def parse_nifty():
-    url = request.json.get("url")
-    html = requests.get(url).text
-    soup = BeautifulSoup(html, "html.parser")
+    try:
+        # GASから送られてきたJSONを取得
+        data = request.get_json()
+        url = data.get('url')
 
-    title = soup.select_one("h1").text.strip() if soup.select_one("h1") else ""
-    rent = layout = size = age = walk = "取得失敗"
+        if not url:
+            return jsonify({'error': 'URLが送られていません'}), 400
 
-    detail_text = soup.get_text()
+        print(f"URL受け取りました: {url}")
 
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": "以下の物件情報から特徴を箇条書きで3つ教えて"},
-            {"role": "user", "content": detail_text}
+        # ここで物件情報を抜き出す処理（関数などに置き換えてください）
+        # 例としてOpenAIに質問する例を載せます
+
+        # ChatGPTに物件URLの情報を整理してもらうイメージ
+        messages = [
+            {"role": "system", "content": "あなたは不動産情報をわかりやすく整理するアシスタントです。"},
+            {"role": "user", "content": f"次のURLの物件情報を抽出してください: {url}"}
         ]
-    )
 
-    features = response["choices"][0]["message"]["content"]
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages,
+        )
 
-    return jsonify({
-        "title": title,
-        "rent": rent,
-        "layout": layout,
-        "size": size,
-        "age": age,
-        "walk": walk,
-        "features": features
-    })
+        answer_text = response.choices[0].message.content
+        print(f"OpenAIの回答: {answer_text}")
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+        # 必要ならここでさらに解析や加工も可能
