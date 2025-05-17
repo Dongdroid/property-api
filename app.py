@@ -1,11 +1,15 @@
 import os
 from flask import Flask, request, jsonify
 from openai import OpenAI
+import traceback
 
 app = Flask(__name__)
 
-# 環境変数からOpenAIのAPIキーを取得してクライアント初期化
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+api_key = os.getenv("OPENAI_API_KEY")
+if not api_key:
+    raise EnvironmentError("環境変数 'OPENAI_API_KEY' が設定されていません。")
+
+client = OpenAI(api_key=api_key)
 
 @app.route('/')
 def hello():
@@ -14,7 +18,6 @@ def hello():
 @app.route('/parse_nifty', methods=['POST'])
 def parse_nifty():
     try:
-        # GASから送られてきたJSONを取得
         data = request.get_json()
         url = data.get('url')
 
@@ -23,7 +26,6 @@ def parse_nifty():
 
         print(f"URL受け取りました: {url}")
 
-        # ChatGPTに物件URLの情報を整理してもらう
         messages = [
             {"role": "system", "content": "あなたは不動産情報をわかりやすく整理するアシスタントです。"},
             {"role": "user", "content": f"次のURLの物件情報を抽出してください: {url}"}
@@ -40,7 +42,8 @@ def parse_nifty():
         return jsonify({'result': answer_text})
 
     except Exception as e:
-        print(f"エラー: {str(e)}")
+        print("=== エラー発生 ===")
+        print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
