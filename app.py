@@ -28,9 +28,9 @@ def parse_nifty():
             {"role": "user", "content": f"""
 次のURLの物件情報を以下のJSON形式で出力してください：
 {{
-  "title": "物件名",
-  "rent": "家賃（例: 12万円）",
-  "features": ["特徴1", "特徴2", "特徴3"]
+"title": "物件名",
+"rent": "家賃（例: 12万円）",
+"features": ["特徴1", "特徴2", "特徴3"]
 }}
 URL: {url}
 """}
@@ -44,7 +44,6 @@ URL: {url}
         answer_text = response.choices[0].message.content
         print(f"OpenAIの回答: {answer_text}")
 
-        # ChatGPTが返した文字列をJSONとして読み込む
         try:
             result_json = json.loads(answer_text)
         except json.JSONDecodeError:
@@ -56,7 +55,7 @@ URL: {url}
         print(f"エラー: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-# クォータ確認用のデバッグエンドポイント
+# デバッグ用（APIキーの有効性・環境確認などに使えます）
 @app.route('/check_quota')
 def check_quota():
     try:
@@ -66,4 +65,5 @@ def check_quota():
         return jsonify({"error": str(e)})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=10000)
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port)
