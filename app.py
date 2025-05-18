@@ -1,14 +1,15 @@
 import os
 import sys
 from flask import Flask, request, jsonify
-import openai
 import requests
 from bs4 import BeautifulSoup
+from openai import OpenAI
+from openai import OpenAIError
 
 app = Flask(__name__)
 
-# OpenAI APIキーを環境変数から取得
-openai.api_key = os.environ.get("OPENAI_API_KEY")
+# OpenAI client 初期化
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 @app.route('/')
 def home():
@@ -26,22 +27,22 @@ def parse_nifty():
         response = requests.get(url)
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        # 物件タイトル取得
+        # タイトル取得
         title = soup.title.string.strip() if soup.title else 'タイトルなし'
 
-        # 家賃取得（簡易版、ページによって構造が異なる場合あり）
+        # 家賃取得
         rent_elem = soup.find("th", string="賃料")
         rent = rent_elem.find_next_sibling("td").get_text(strip=True) if rent_elem else "不明"
 
-        # ChatGPTへ特徴抽出依頼
+        # ChatGPTへ特徴抽出依頼（OpenAI 1.x対応）
         prompt = f"以下の物件情報から、特徴を3つに要約してください:\nタイトル: {title}\n家賃: {rent}"
-        chat_response = openai.ChatCompletion.create(
+
+        chat_response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.7
         )
 
-        # 回答整形
         content = chat_response.choices[0].message.content.strip()
         features = [f.strip("・ \n") for f in content.split("・") if f.strip()]
 
@@ -51,17 +52,21 @@ def parse_nifty():
             "features": features[:3]
         })
 
-    except Exception as e:
-        print(f"❌ エラー発生: {str(e)}")
+    except OpenAIError as e:
+        print(f"OpenAIエラー: {str(e)}")
         sys.stdout.flush()
         return jsonify({"error": str(e)}), 500
 
-# Quotaチェック用（オプション）
+    except Exception as e:
+        print(f"❌ その他エラー: {str(e)}")
+        sys.stdout.flush()
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/check_quota')
 def check_quota():
     try:
-        response = openai.Model.list()
-        return jsonify({"status": "OK", "models_count": len(response.data)})
+        models = client.models.list()
+        return jsonify({"status": "OK", "models_count": len(models.data)})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
